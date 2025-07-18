@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Tracker - Daily</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(120deg, #dfe9f3 0%, #ffffff 100%);
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: #2f3542;
+      margin-bottom: 20px;
+    }
+    .tracker {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+    }
+    .alert {
+      background-color: #fffae6;
+      color: #8d6e63;
+      padding: 10px 15px;
+      border-radius: 12px;
+      font-size: 14px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .month-select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+    .date-label {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #ffffff;
+      background-color: #1e90ff;
+      padding: 6px 12px;
+      border-radius: 10px;
+      display: inline-block;
+    }
+    .day {
+      margin-bottom: 20px;
+      background: #f7f9fb;
+      border-radius: 16px;
+      padding: 15px;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .checkbox {
+      transform: scale(1.3);
+      margin-top: 3px;
+    }
+    .task {
+      font-size: 15px;
+      font-weight: 500;
+      flex: 1;
+    }
+    .note-input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    .save-btn {
+      width: 100%;
+      padding: 10px;
+      background: #00b894;
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .month {
+      display: none;
+    }
+    .month.active {
+      display: block;
+    }
+  </style>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log("Service Worker registered:", reg.scope))
+          .catch(err => console.error("Service Worker registration failed:", err));
+      });
+    }
+  </script>
+</head>
+<body>
+  <div class="tracker">
+    <h1>📚 AI + GRE & IELTS Study Tracker</h1>
+    <div id="alertBox" class="alert" style="display:none;"></div>
+    <select class="month-select" onchange="showMonth(this.value)">
+      <option value="">Select Month</option>
+      <option value="august">August 2025</option>
+      <option value="september">September 2025</option>
+      <option value="october">October 2025</option>
+      <option value="november">November 2025</option>
+      <option value="december">December 2025</option>
+    </select>
+    <div id="august" class="month"></div>
+    <div id="september" class="month"></div>
+    <div id="october" class="month"></div>
+    <div id="november" class="month"></div>
+    <div id="december" class="month"></div>
+  </div>
+ <script>
+  function toggleChatbot() {
+    const popup = document.getElementById("chatbot-popup");
+    popup.style.display = popup.style.display === "none" ? "block" : "none";
+  }
+
+  async function getVideoFromChatbot() {
+    const input = document.getElementById("chatbot-input").value;
+    const resultBox = document.getElementById("chatbot-result");
+    resultBox.innerHTML = "🔍 Finding video...";
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapter: input })
+      });
+
+      const data = await response.json();
+      const video = data.recommendation;
+
+      if (typeof video === "string") {
+        resultBox.innerHTML = video;
+      } else if (typeof video === "object") {
+        resultBox.innerHTML = `
+          <strong>${video.title}</strong><br>
+          <a href="${video.url}" target="_blank">📺 Watch on YouTube</a>
+        `;
+      } else {
+        resultBox.innerHTML = "⚠️ No video found.";
+      }
+    } catch (error) {
+      resultBox.innerHTML = "⚠️ Error: Couldn't fetch recommendation.";
+      console.error("Error:", error);
+    }
+  }
+
+  async function getRecommendation() {
+    const chapter = document.getElementById("chapter").value;
+    const resultElement = document.getElementById("result");
+
+    try {
+      const response = await fetch("http://127.0.0.1:5000/recommend", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chapter: chapter }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
+
+      const data = await response.json();
+
+      if (typeof data.recommendation === "string") {
+        resultElement.innerText = data.recommendation;
+      } else if (typeof data.recommendation === "object") {
+        resultElement.innerHTML = `
+          <strong>${data.recommendation.title}</strong><br>
+          <a href="${data.recommendation.url}" target="_blank">📺 Watch</a>
+        `;
+      } else {
+        resultElement.innerText = "⚠️ Unexpected format in response.";
+      }
+    } catch (error) {
+      resultElement.innerText = "⚠️ Error: Couldn't fetch recommendation.";
+      console.error("Error:", error);
+    }
+  }
+
+  function showMonth(monthId) {
+    document.querySelectorAll('.month').forEach(m => m.classList.remove('active'));
+    document.getElementById(monthId).classList.add('active');
+
+    const alertBox = document.getElementById('alertBox');
+    if (monthId === 'september') {
+      alertBox.innerText = '📌 Reminder: GRE and IELTS registration opens mid-September!';
+      alertBox.style.display = 'block';
+    } else if (monthId === 'november') {
+      alertBox.innerText = '✅ Final week of November: Most top universities\' priority deadlines open!';
+      alertBox.style.display = 'block';
+    } else if (monthId === 'october') {
+      alertBox.innerText = '📢 Application strategy, LORs and SoPs drafting begin in October!';
+      alertBox.style.display = 'block';
+    } else {
+      alertBox.style.display = 'none';
+    }
+  }
+
+  function saveNote(dayId) {
+    const note = document.getElementById(`note-${dayId}`).value;
+    localStorage.setItem(`note-${dayId}`, note);
+    const checkbox = document.getElementById(`checkbox-${dayId}`);
+    localStorage.setItem(`checkbox-${dayId}`, checkbox.checked);
+    alert('Saved!');
+  }
+
+  window.onload = () => {
+    document.querySelectorAll('[id^="note-"]').forEach(input => {
+      const saved = localStorage.getItem(input.id);
+      if (saved) input.value = saved;
+    });
+    document.querySelectorAll('[id^="checkbox-"]').forEach(box => {
+      const savedState = localStorage.getItem(box.id);
+      if (savedState !== null) box.checked = savedState === 'true';
+    });
+  };
+
+  const topics = [
+    "GRE Verbal: Reading Comprehension", "IELTS Listening Practice", "GRE Quant: Arithmetic Review",
+    "IELTS Speaking Practice", "GRE Verbal: Text Completion", "IELTS Writing Task 1", "Full-Length GRE Practice Test",
+    "IELTS Reading Strategies", "GRE Quant: Algebra I", "IELTS Listening + Note Making",
+    "GRE Verbal: Sentence Equivalence", "IELTS Speaking Cue Cards", "GRE Quant: Geometry Basics",
+    "IELTS Writing Task 2", "GRE Verbal: Vocabulary Drill", "IELTS Grammar & Sentence Structure",
+    "GRE Quant: Data Interpretation", "IELTS Practice Test (Full)", "GRE Verbal + IELTS Speaking Combo Day",
+    "GRE Quant: Word Problems", "IELTS Listening + Reading Practice", "GRE AWA Essay Practice",
+    "IELTS Writing Task 2 Timed", "GRE Quant: Practice Set", "IELTS Speaking Mock", "GRE Verbal: Mixed Practice",
+    "IELTS Grammar Advanced", "GRE Quant: Timed Section", "IELTS Reading Speed Test", "Full Mock Test: GRE + IELTS"
+  ];
+
+  const months = {
+    august: topics,
+    september: topics,
+    october: topics,
+    november: topics,
+    december: topics,
+    january: topics,
+  };
+
+  function addBlogReminder(tasks) {
+    const reminder = "✍️ Weekly Blog Prep Reminder";
+    for (let i = 6; i < tasks.length; i += 7) {
+      tasks[i] += ` | ${reminder}`;
+    }
+  }
+
+  Object.keys(months).forEach(m => addBlogReminder(months[m]));
+
+  Object.entries(months).forEach(([monthId, tasks]) => {
+    const container = document.getElementById(monthId);
+    tasks.forEach((task, i) => {
+      const date = `${monthId.charAt(0).toUpperCase() + monthId.slice(1)} ${i + 1}, 2025`;
+      const checkboxId = `checkbox-${monthId}-${i+1}`;
+      const noteId = `note-${monthId}-${i+1}`;
+      container.innerHTML += `
+        <div class="date-label">${date}</div>
+        <div class="day">
+          <div class="checkbox-row">
+            <input type="checkbox" class="checkbox" id="${checkboxId}">
+            <div class="task">${task}</div>
+          </div>
+          <textarea class="note-input" id="${noteId}" placeholder="Write notes or textbook reference..."></textarea>
+          <button class="save-btn" onclick="saveNote('${monthId}-${i+1}')">Save</button>
+        </div>
+      `;
+    });
+  });
+</script>
+
+  <!-- Floating Chatbot Button -->
+<div id="chatbot-icon" onclick="toggleChatbot()" style="position: fixed; bottom: 25px; right: 25px; background-color: #007bff; color: white; width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 24px; z-index: 1000;">
+  💬
+</div>
+
+<!-- Chatbot Popup -->
+<div id="chatbot-popup" style="position: fixed; bottom: 100px; right: 25px; width: 300px; background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); padding: 15px; display: none; z-index: 999;">
+  <h3 style="margin-bottom: 10px; font-size: 16px;">🎓 Ask AI for a Video</h3>
+  <input type="text" id="chatbot-input" placeholder="Enter topic or chapter..." style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc;" />
+  <button onclick="getVideoFromChatbot()" style="margin-top: 10px; width: 100%; padding: 8px; background-color: #007bff; color: white; border: none; border-radius: 8px;">Recommend</button>
+  <div id="chatbot-result" style="margin-top: 10px; font-size: 14px;"></div>
+</div>
+
+</body>
+</html>
+
+
+
+
+
