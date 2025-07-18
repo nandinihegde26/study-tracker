@@ -1,25 +1,16 @@
-from flask import Flask, request, jsonify, render_template
-from model import recommend_video
+from flask import Flask
+import os
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route("/")
 def home():
-    return render_template("index.html")
+    return "Hello from Render!"
 
-@app.route('/recommend', methods=['POST'])
-def recommend():
-    data = request.get_json()
-    chapter = data.get("chapter", "").strip().lower()
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
-    if not chapter:
-        return jsonify({"error": "No chapter provided"}), 400
-
-    result = recommend_video(chapter)
-    return jsonify({"recommendation": result})
-
-if __name__ == '__main__':
-    app.run(debug=True)
 
 
 
